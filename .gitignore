@@ -1,0 +1,16 @@
+# Build artifacts & compiled objects
+*.obj
+*.res
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.exe
+*.zip
+
+# Portable distribution & CMake build directories
+dist/
+build/
+uxplay-src/build/
+.vs/
+.vscode/
