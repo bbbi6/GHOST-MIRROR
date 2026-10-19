@@ -1,11 +1,11 @@
 # 👻 GHOST MIRROR
 
-**Minimal Aesthetic AirPlay Screen Mirroring Receiver for Windows (Ultra-Low Latency D3D11 + WASAPI)**  
-*HAIL THAN TAI · EDITION*
+**AirPlay Screen Mirroring Receiver for Windows (Ultra-Low Latency D3D11 + WASAPI)**  
+*FAST · EDITION*
 
 ![Ghost Mirror Logo](assets/ghost_preview.png)
 
-## ✨ Features
+## Features
 - **Zero-Bloat Native Win32 + Direct2D UI**: Dark-mode borderless HUD (`#09090B` Obsidian Zinc + Electric Indigo glow) with custom Ghost emblem and system tray support.
 - **Hardware-Accelerated Rendering**: Powered by a customized UxPlay + GStreamer `d3d11videosink` pipeline with `-vsync no` for sub-frame mirroring latency.
 - **Advance Custom Controls**:
@@ -16,7 +16,7 @@
 
 ---
 
-## 🚀 Quick Start (Portable Release)
+## Quick Start (Portable Release)
 1. Download `GhostMirror-Portable.zip` from **Releases** and extract it anywhere.
 2. Run **`GhostMirror.exe`**.
 3. Connect your iPhone / iPad / Mac to the **same Wi-Fi / LAN** as your PC.
@@ -24,7 +24,7 @@
 
 ---
 
-## 🛠️ Building from Source
+## Building from Source
 ### Prerequisites
 - **Visual Studio 2022 Build Tools** (MSVC `cl.exe` & `rc.exe`)
 - **MSYS2 UCRT64** (`C:\msys64\ucrt64`) with `mingw-w64-ucrt-x86_64-gstreamer`, `gst-plugins-base`, `gst-plugins-good`, `gst-plugins-bad`, `gst-libav`, `openssl`, `libplist`.
@@ -35,5 +35,5 @@
 build.bat
 ```
 
-## 📜 License
+## License
 Released under the **GNU General Public License v3.0 (GPL-3.0)** (includes modified [UxPlay](https://github.com/FDH2/UxPlay) engine under GPLv3).
