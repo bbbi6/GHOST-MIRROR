@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 #include <string>
 
 enum class GhostPhase {
@@ -39,6 +40,8 @@ struct GhostConfig {
     int volume_percent = 85; // 0..100 real-time WASAPI volume slider
     bool pin_enabled = false;
     bool fullscreen = false;
+    bool motion_enabled = true; // Yoyu-inspired header MOTION toggle
+    bool dark_mode = false;     // Architectural Dark Blueprint toggle
 };
 
 struct GhostState {
@@ -74,6 +77,18 @@ inline void apply_preset(GhostConfig& cfg, GhostPreset p) {
             break;
         case GhostPreset::Custom:
             break;
+    }
+}
+
+inline void sync_preset_from_config(GhostConfig& cfg) {
+    if (!cfg.vsync && cfg.fps == 60 && cfg.res == GhostRes::Res1080p && cfg.codec == GhostCodec::H264) {
+        cfg.preset = GhostPreset::LowLatency1080p60;
+    } else if (!cfg.vsync && cfg.fps == 60 && cfg.res == GhostRes::Res1440p && cfg.codec == GhostCodec::H264) {
+        cfg.preset = GhostPreset::Sharp1440p60;
+    } else if (!cfg.vsync && cfg.fps == 60 && cfg.res == GhostRes::Res4K && cfg.codec == GhostCodec::H265) {
+        cfg.preset = GhostPreset::Ultra4K60H265;
+    } else {
+        cfg.preset = GhostPreset::Custom;
     }
 }
 
@@ -127,8 +142,29 @@ inline std::string res_dimensions(GhostRes r) {
     return "1920x1080";
 }
 
+inline const wchar_t* res_short_label(GhostRes r) {
+    switch (r) {
+        case GhostRes::Res720p:  return L"720p";
+        case GhostRes::Res1080p: return L"1080p";
+        case GhostRes::Res1440p: return L"1440p";
+        case GhostRes::Res4K:    return L"4K UHD";
+    }
+    return L"1080p";
+}
+
 inline const wchar_t* codec_label(GhostCodec c) {
     return (c == GhostCodec::H265) ? L"CODEC: H.265" : L"CODEC: H.264";
+}
+
+inline const wchar_t* codec_short_label(GhostCodec c) {
+    return (c == GhostCodec::H265) ? L"H.265" : L"H.264";
+}
+
+// Exponential ease-out for crisp 160ms–420ms UI choreography (no bounce/linear slop)
+inline float ease_out_expo(float t) {
+    if (t <= 0.0f) return 0.0f;
+    if (t >= 1.0f) return 1.0f;
+    return 1.0f - std::pow(2.0f, -10.0f * t);
 }
 
 // ponytail: fixed substring parser over UxPlay 1.74 log lines; upgrade to structured IPC only if UxPlay changes log format
@@ -185,14 +221,18 @@ inline void parse_uxplay_line(GhostState& st, const std::string& raw_line) {
         return;
     }
 
-    // 3. Client disconnected / reset back to waiting
+    // 3. Client disconnected / reset back to waiting (must run BEFORE fatal error check!)
     if (line.find("tcp socket was closed by client") != std::string::npos ||
+        line.find("raop_rtp_mirror->running is no longer true") != std::string::npos ||
+        line.find("raop_rtp_mirror error in recv") != std::string::npos ||
         line.find("lost connection with client") != std::string::npos ||
+        line.find("Open connections: 0") != std::string::npos ||
         line.find("video_reset") != std::string::npos) {
         st.phase = GhostPhase::Waiting;
         st.client_name.clear();
         st.client_model.clear();
         st.pin.clear();
+        st.error_msg.clear();
         return;
     }
 
@@ -205,6 +245,11 @@ inline void parse_uxplay_line(GhostState& st, const std::string& raw_line) {
             st.phase = GhostPhase::Waiting;
             st.error_msg.clear();
         }
+        return;
+    }
+
+    // 4.5. Transient client feedback warning (NOT fatal — ignore so UI doesn't flash ERROR)
+    if (line.find("seconds since last client feedback request") != std::string::npos) {
         return;
     }
 

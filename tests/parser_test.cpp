@@ -33,8 +33,21 @@ int main() {
     assert(st.phase == GhostPhase::Waiting);
     assert(st.client_name.empty());
 
-    // 5. Reconnect then network lost -> returns to Waiting
+    // 5. Reconnect then network lost / clean mirror stop / recv error -> returns to Waiting (NOT fatal Error!)
     parse_uxplay_line(st, "connection request from iPad Pro (iPad14,5) with deviceID = 11:22:33:44:55:66");
+    assert(st.phase == GhostPhase::Connected);
+    parse_uxplay_line(st, "*** ERROR:   3 seconds since last client feedback request (expected every two seconds); client may be offline");
+    assert(st.phase == GhostPhase::Connected); // transient warning must not trigger Error
+    parse_uxplay_line(st, "raop_rtp_mirror->running is no longer true");
+    assert(st.phase == GhostPhase::Waiting);
+    assert(st.client_name.empty());
+
+    parse_uxplay_line(st, "connection request from iPhone (iPhone16,2) with deviceID = AA:BB:CC:DD:EE:FF");
+    assert(st.phase == GhostPhase::Connected);
+    parse_uxplay_line(st, "*** ERROR: raop_rtp_mirror error in recv: 10054 Connection reset by peer");
+    assert(st.phase == GhostPhase::Waiting); // disconnect recv error must return to Waiting, not Error!
+
+    parse_uxplay_line(st, "connection request from MacBook (Mac15,6) with deviceID = 22:33:44:55:66:77");
     assert(st.phase == GhostPhase::Connected);
     parse_uxplay_line(st, "*** ERROR lost connection with client (network problem?)");
     assert(st.phase == GhostPhase::Waiting);
@@ -75,6 +88,28 @@ int main() {
     assert(cmdCustom.find("-a") != std::string::npos);
     assert(cmdCustom.find("-pin") != std::string::npos);
     assert(cmdCustom.find("-fs") != std::string::npos);
+
+    // 8. UI helpers, preset sync & exponential easing sanity checks
+    GhostConfig syncCfg;
+    assert(syncCfg.dark_mode == false);
+    assert(syncCfg.motion_enabled == true);
+    syncCfg.res = GhostRes::Res4K;
+    syncCfg.fps = 60;
+    syncCfg.codec = GhostCodec::H265;
+    syncCfg.vsync = false;
+    sync_preset_from_config(syncCfg);
+    assert(syncCfg.preset == GhostPreset::Ultra4K60H265);
+    syncCfg.fps = 120;
+    sync_preset_from_config(syncCfg);
+    assert(syncCfg.preset == GhostPreset::Custom);
+
+    assert(std::wstring(res_short_label(GhostRes::Res4K)) == L"4K UHD");
+    assert(std::wstring(codec_short_label(GhostCodec::H265)) == L"H.265");
+    assert(ease_out_expo(-0.5f) == 0.0f);
+    assert(ease_out_expo(0.0f) == 0.0f);
+    assert(ease_out_expo(1.0f) == 1.0f);
+    assert(ease_out_expo(1.5f) == 1.0f);
+    assert(ease_out_expo(0.5f) > 0.95f && ease_out_expo(0.5f) < 1.0f);
 
     printf("ALL PARSER & ADVANCE COMMAND BUILDER TESTS PASSED!\n");
     return 0;
